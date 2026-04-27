@@ -23,15 +23,18 @@ export default function Navbar() {
         </div>
 
         <div className="hidden md:flex items-center gap-8">
+          <Link href="/features" className="text-sm font-medium text-slate-600 hover:text-indigo-600 transition-colors">
+            Features
+          </Link>
+          <Link href="/templates" className="text-sm font-medium text-slate-600 hover:text-indigo-600 transition-colors">
+            Templates
+          </Link>
+          <Link href="/resources" className="text-sm font-medium text-slate-600 hover:text-indigo-600 transition-colors">
+            Resources
+          </Link>
           <Link href="/pricing" className="text-sm font-medium text-slate-600 hover:text-indigo-600 transition-colors">
             Pricing
           </Link>
-          <a href="#" className="text-sm font-medium text-slate-600 hover:text-indigo-600 transition-colors">
-            Templates
-          </a>
-          <a href="#" className="text-sm font-medium text-slate-600 hover:text-indigo-600 transition-colors">
-            Resources
-          </a>
         </div>
 
         <div className="flex items-center gap-4">

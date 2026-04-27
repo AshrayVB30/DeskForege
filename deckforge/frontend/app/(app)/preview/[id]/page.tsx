@@ -10,6 +10,7 @@ import {
 interface Slide {
   title: string
   points: string[]
+  image_url?: string
 }
 
 interface Presentation {
@@ -86,9 +87,8 @@ function PresentationMode({
         />
       </div>
 
-      {/* Slide content */}
       <div
-        className="flex-1 flex flex-col justify-center px-16 lg:px-32 py-12 overflow-hidden cursor-pointer"
+        className="flex-1 flex flex-col lg:flex-row items-center justify-center px-16 lg:px-32 py-12 overflow-hidden cursor-pointer gap-12"
         onClick={() => go(1)}
         style={{
           opacity: animDir === 'in' ? 1 : 0,
@@ -96,17 +96,28 @@ function PresentationMode({
           transition: 'opacity 150ms ease, transform 150ms ease',
         }}
       >
-        <h1 className="text-4xl sm:text-6xl lg:text-7xl font-extrabold text-white leading-tight mb-10 tracking-tight">
-          {slide.title}
-        </h1>
-        <ul className="space-y-5">
-          {slide.points.filter(Boolean).map((pt, i) => (
-            <li key={i} className="flex gap-5 items-start">
-              <span className="mt-3 w-2.5 h-2.5 rounded-full bg-indigo-400 shrink-0" />
-              <p className="text-xl sm:text-2xl text-white/75 leading-relaxed">{pt}</p>
-            </li>
-          ))}
-        </ul>
+        <div className="flex-1">
+          <h1 className="text-4xl sm:text-6xl lg:text-7xl font-extrabold text-white leading-tight mb-10 tracking-tight">
+            {slide.title}
+          </h1>
+          <ul className="space-y-5">
+            {slide.points.filter(Boolean).map((pt, i) => (
+              <li key={i} className="flex gap-5 items-start">
+                <span className="mt-3 w-2.5 h-2.5 rounded-full bg-indigo-400 shrink-0" />
+                <p className="text-xl sm:text-2xl text-white/75 leading-relaxed">{pt}</p>
+              </li>
+            ))}
+          </ul>
+        </div>
+        {slide.image_url && (
+          <div className="flex-1 max-w-2xl">
+            <img 
+              src={slide.image_url} 
+              alt={slide.title} 
+              className="w-full h-auto rounded-2xl shadow-2xl border border-white/10"
+            />
+          </div>
+        )}
       </div>
 
       {/* Bottom nav */}
@@ -235,15 +246,13 @@ export default function PreviewPage() {
     }
   }, [data, id])
 
-  // Auto-save with debounce, skip initial mount
   useEffect(() => {
     if (!data || loading) return
     if (isInitialMount.current) { isInitialMount.current = false; return }
     const timer = setTimeout(handleSave, 1500)
     return () => clearTimeout(timer)
-  }, [data]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [data]) 
 
-  // --- Download PPTX ---
   const handleDownload = async () => {
     try {
       const token = localStorage.getItem('token')
@@ -266,36 +275,38 @@ export default function PreviewPage() {
     }
   }
 
-  // --- Loading / error states ---
   if (loading) {
     return (
-      <div className="h-full flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
+      <div className="h-full flex items-center justify-center bg-slate-950">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="w-10 h-10 text-indigo-500 animate-spin" />
+          <span className="text-slate-500 text-sm font-medium animate-pulse">Loading Workspace...</span>
+        </div>
       </div>
     )
   }
 
   if (!data || !data.slides?.length) {
-    return <div className="p-10 text-center text-slate-500">Could not load presentation.</div>
+    return <div className="p-10 text-center text-slate-500 bg-slate-950 h-full flex items-center justify-center">Could not load presentation.</div>
   }
 
   const SaveIndicator = () => {
     if (saveStatus === 'saving') return (
-      <span className="flex items-center gap-1.5 text-xs text-slate-400">
-        <Loader2 className="w-3.5 h-3.5 animate-spin" /> Saving…
+      <span className="flex items-center gap-2 text-[10px] font-bold text-slate-500">
+        <Loader2 className="w-3 h-3 animate-spin" /> SYNCING...
       </span>
     )
     if (saveStatus === 'saved') return (
-      <span className="flex items-center gap-1.5 text-xs text-emerald-600">
-        <CheckCircle className="w-3.5 h-3.5" /> Saved
+      <span className="flex items-center gap-2 text-[10px] font-bold text-emerald-500">
+        <CheckCircle className="w-3 h-3" /> CHANGES SAVED
       </span>
     )
-    if (saveStatus === 'error') return <span className="text-xs text-red-500">Save failed</span>
+    if (saveStatus === 'error') return <span className="text-[10px] font-bold text-red-500">SAVE FAILED</span>
     return null
   }
 
   return (
-    <>
+    <div className="h-screen flex flex-col bg-slate-950 overflow-hidden text-slate-200">
       {/* ── Presentation mode overlay ── */}
       {presentMode && (
         <PresentationMode
@@ -306,155 +317,221 @@ export default function PreviewPage() {
         />
       )}
 
-      <div className="h-full flex flex-col bg-slate-50 overflow-hidden">
-
-        {/* Top Bar */}
-        <div className="h-16 px-6 bg-white border-b border-slate-200 flex items-center justify-between shrink-0 shadow-sm">
-          <div className="flex items-center gap-3">
-            <h1 className="text-xl font-bold text-slate-900 truncate max-w-xs">{data.title}</h1>
-            <SaveIndicator />
+      {/* ── Header ── */}
+      <header className="h-14 px-4 bg-slate-900 border-b border-white/5 flex items-center justify-between shrink-0 z-20 shadow-2xl">
+        <div className="flex items-center gap-4 flex-1">
+          <div className="flex items-center gap-2 px-2 py-1 rounded-md hover:bg-white/5 transition-colors cursor-default">
+            <div className="w-6 h-6 rounded bg-indigo-500 flex items-center justify-center">
+              <Type className="w-4 h-4 text-white" />
+            </div>
+            <h1 className="text-sm font-bold text-white truncate max-w-[200px] lg:max-w-md">{data.title}</h1>
           </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handleSave}
-              disabled={saveStatus === 'saving'}
-              className="flex items-center gap-2 px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-medium transition-colors hidden sm:flex"
-            >
-              <Save className="w-4 h-4" /> Save
-            </button>
-            {/* Present button */}
-            <button
-              onClick={() => setPresentMode(true)}
-              className="flex items-center gap-2 px-3.5 py-2 bg-slate-900 hover:bg-slate-700 text-white rounded-lg text-sm font-medium transition-all hidden sm:flex"
-            >
-              <Play className="w-4 h-4 fill-white" /> Present
-            </button>
-            {/* Fullscreen icon for mobile */}
-            <button
-              onClick={() => setPresentMode(true)}
-              className="p-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition sm:hidden"
-              title="Present"
-            >
-              <Maximize2 className="w-4 h-4" />
-            </button>
-            {/* Download */}
-            <button
-              onClick={handleDownload}
-              className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium shadow-md shadow-indigo-600/20 transition-all"
-            >
-              <Download className="w-4 h-4" /> Download PPTX
-            </button>
-          </div>
+          <div className="h-4 w-px bg-white/10 hidden sm:block" />
+          <SaveIndicator />
         </div>
 
-        <div className="flex flex-1 overflow-hidden">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleSave}
+            disabled={saveStatus === 'saving'}
+            className="flex items-center gap-2 px-3 py-1.5 hover:bg-white/5 text-slate-400 hover:text-white rounded-md text-xs font-semibold transition-all"
+          >
+            <Save className="w-3.5 h-3.5" /> Save
+          </button>
+          <button
+            onClick={() => setPresentMode(true)}
+            className="flex items-center gap-2 px-3 py-1.5 hover:bg-white/5 text-slate-400 hover:text-white rounded-md text-xs font-semibold transition-all"
+          >
+            <Play className="w-3.5 h-3.5" /> Present
+          </button>
+          <div className="h-4 w-px bg-white/10 mx-1" />
+          <button
+            onClick={handleDownload}
+            className="flex items-center gap-2 px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-md text-xs font-bold transition-all shadow-lg shadow-indigo-500/20"
+          >
+            <Download className="w-3.5 h-3.5" /> Export PPTX
+          </button>
+        </div>
+      </header>
 
-          {/* Left — Thumbnails */}
-          <div className="w-48 sm:w-56 border-r border-slate-200 bg-slate-50 p-4 flex flex-col gap-3 overflow-y-auto shrink-0">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2 px-2">
-              Slides ({data.slides.length})
-            </h2>
+      {/* ── Main Content ── */}
+      <main className="flex flex-1 overflow-hidden">
+        
+        {/* 1. Sidebar - Outlines */}
+        <aside className="w-64 bg-slate-900 border-r border-white/5 flex flex-col shrink-0">
+          <div className="p-4 border-b border-white/5 flex items-center justify-between">
+            <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Slides</span>
+            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-white/5 text-slate-400">{data.slides.length}</span>
+          </div>
+          <div className="flex-1 overflow-y-auto p-3 space-y-2 scrollbar-hide">
             {data.slides.map((slide, idx) => (
               <button
                 key={idx}
                 onClick={() => setActiveSlide(idx)}
-                className={`relative aspect-video rounded-lg border-2 p-3 text-left overflow-hidden transition-all bg-white
-                  ${activeSlide === idx ? 'border-indigo-600 shadow-sm' : 'border-slate-200 hover:border-indigo-300'}`}
+                className={`group relative w-full rounded-lg transition-all duration-200 text-left p-3
+                  ${activeSlide === idx 
+                    ? 'bg-indigo-500/10 ring-1 ring-indigo-500/50' 
+                    : 'hover:bg-white/5'}`}
               >
-                <div className="absolute top-1.5 left-2 text-[10px] font-bold text-slate-400">{idx + 1}</div>
-                <div className="mt-2 text-xs font-semibold text-slate-800 line-clamp-2">{slide.title || 'Untitled'}</div>
+                <div className="flex gap-3 items-start">
+                  <span className={`text-[10px] font-bold shrink-0 mt-0.5 ${activeSlide === idx ? 'text-indigo-400' : 'text-slate-600'}`}>
+                    {idx + 1}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <p className={`text-xs font-semibold truncate ${activeSlide === idx ? 'text-white' : 'text-slate-400 group-hover:text-slate-200'}`}>
+                      {slide.title || 'Untitled Slide'}
+                    </p>
+                    <p className="text-[10px] text-slate-600 truncate mt-0.5">
+                      {slide.points.length} points
+                    </p>
+                  </div>
+                </div>
               </button>
             ))}
           </div>
+        </aside>
 
-          {/* Center — Canvas */}
-          <div className="flex-1 bg-slate-100/50 flex py-8 px-4 sm:px-12 items-start justify-center overflow-y-auto">
-            <div className="w-full max-w-4xl aspect-video bg-white shadow-2xl shadow-slate-200/50 border border-slate-200 rounded-xl flex flex-col p-8 sm:p-12 relative sticky top-0">
-              <div className="flex-1 flex flex-col justify-center">
-                <h1 className="text-3xl sm:text-5xl font-extrabold text-slate-900 mb-8 leading-tight">
-                  {data.slides[activeSlide]?.title || <span className="text-slate-300 italic">No title</span>}
-                </h1>
-                <ul className="space-y-4">
-                  {data.slides[activeSlide]?.points.map((pt, i) => (
-                    <li key={i} className="flex gap-4 items-start">
-                      <span className="w-2 h-2 shrink-0 bg-indigo-500 rounded-full mt-2.5" />
-                      <p className="text-lg sm:text-xl text-slate-700 leading-relaxed">{pt}</p>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-              {/* Slide counter + present hint */}
-              <div className="flex items-center justify-between mt-4">
-                <button
-                  onClick={() => setPresentMode(true)}
-                  className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-indigo-600 transition"
-                >
-                  <Play className="w-3.5 h-3.5 fill-current" /> Present from here
-                </button>
-                <span className="text-slate-300 font-bold text-sm">
-                  {activeSlide + 1} / {data.slides.length}
-                </span>
-              </div>
+        {/* 2. Canvas - Central Area */}
+        <section className="flex-1 relative bg-slate-950 flex flex-col overflow-hidden">
+          {/* Canvas Toolbar */}
+          <div className="h-10 px-4 border-b border-white/5 flex items-center justify-between bg-slate-900/50 shrink-0">
+            <div className="flex items-center gap-4">
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Preview</span>
+            </div>
+            <div className="flex items-center gap-4">
+              <span className="text-[10px] font-bold text-slate-600">Scale: 100%</span>
             </div>
           </div>
 
-          {/* Right — Edit Panel */}
-          <div className="w-80 border-l border-slate-200 bg-white p-6 flex flex-col gap-5 overflow-y-auto shrink-0 hidden lg:flex">
-            <div className="flex items-center gap-2">
-              <Edit3 className="w-5 h-5 text-indigo-600" />
-              <h2 className="text-lg font-bold text-slate-900">Edit Slide {activeSlide + 1}</h2>
-            </div>
+          {/* Slide Stage */}
+          <div className="flex-1 overflow-auto p-8 lg:p-12 flex items-center justify-center scrollbar-hide">
+             <div className="w-full max-w-[960px] aspect-video bg-white rounded-xl shadow-[0_0_100px_rgba(0,0,0,0.5)] overflow-hidden relative group">
+                {/* Fixed slide layout to prevent clipping */}
+                <div className="absolute inset-0 p-[8%] flex flex-col lg:flex-row gap-[6%] items-center justify-center">
+                  <div className="flex-1 min-w-0">
+                    <div className="h-1.5 w-12 bg-indigo-500 rounded-full mb-6" />
+                    <h1 className="text-4xl lg:text-5xl font-black text-slate-900 leading-[1.15] mb-8 tracking-tight">
+                      {data.slides[activeSlide]?.title || 'Slide Title'}
+                    </h1>
+                    <ul className="space-y-4">
+                      {data.slides[activeSlide]?.points.map((pt, i) => (
+                        <li key={i} className="flex gap-4 items-start">
+                          <div className="mt-2.5 w-2 h-2 rounded-full bg-indigo-500 shrink-0" />
+                          <p className="text-lg lg:text-xl text-slate-700 font-medium leading-relaxed">{pt}</p>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
 
-            {/* Title */}
-            <div>
-              <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-2">
-                <Type className="w-4 h-4 text-slate-400" /> Slide Title
-              </label>
-              <input
-                className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition"
-                value={data.slides[activeSlide]?.title || ''}
-                onChange={e => updateSlideTitle(activeSlide, e.target.value)}
-                placeholder="Slide title…"
-              />
-            </div>
+                  {data.slides[activeSlide]?.image_url && (
+                    <div className="flex-1 w-full h-full max-h-[80%] flex items-center justify-center">
+                      <div className="w-full aspect-[4/3] rounded-xl overflow-hidden shadow-2xl ring-1 ring-black/5 bg-slate-50">
+                        <img 
+                          src={data.slides[activeSlide].image_url} 
+                          alt="" 
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
 
-            {/* Bullet points */}
-            <div className="flex-1">
-              <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-2">
-                <LayoutTemplate className="w-4 h-4 text-slate-400" /> Bullet Points
-              </label>
+                {/* Overlays */}
+                <div className="absolute bottom-6 right-8 text-[10px] font-black text-slate-200 uppercase tracking-widest select-none">
+                  {activeSlide + 1} / {data.slides.length}
+                </div>
+             </div>
+          </div>
+
+          {/* Canvas Controls */}
+          <div className="p-4 flex justify-center">
+             <div className="flex items-center gap-2 bg-slate-900 border border-white/10 p-1 rounded-full shadow-2xl">
+               <button 
+                 disabled={activeSlide === 0}
+                 onClick={() => setActiveSlide(s => s - 1)}
+                 className="p-2 rounded-full hover:bg-white/5 disabled:opacity-20 text-slate-400 hover:text-white transition-all"
+               >
+                 <ChevronLeft className="w-4 h-4" />
+               </button>
+               <span className="text-[10px] font-bold px-3 text-slate-400">{activeSlide + 1}</span>
+               <button 
+                 disabled={activeSlide === data.slides.length - 1}
+                 onClick={() => setActiveSlide(s => s + 1)}
+                 className="p-2 rounded-full hover:bg-white/5 disabled:opacity-20 text-slate-400 hover:text-white transition-all"
+               >
+                 <ChevronRight className="w-4 h-4" />
+               </button>
+             </div>
+          </div>
+        </section>
+
+        {/* 3. Editor Panel - Refine Content */}
+        <aside className="w-80 bg-slate-900 border-l border-white/5 flex flex-col shrink-0 overflow-hidden">
+          <div className="p-4 border-b border-white/5">
+            <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Inspector</span>
+          </div>
+          
+          <div className="flex-1 overflow-y-auto p-6 space-y-8 scrollbar-hide">
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 text-white">
+                <Edit3 className="w-4 h-4 text-indigo-400" />
+                <h2 className="text-xs font-bold uppercase tracking-tight">Slide Metadata</h2>
+              </div>
+              
+              {/* Title Input */}
               <div className="space-y-2">
+                <label className="text-[10px] font-bold text-slate-500 ml-0.5">Title</label>
+                <div className="relative group">
+                  <Type className="absolute left-3 top-3 w-3.5 h-3.5 text-slate-600 group-focus-within:text-indigo-400 transition-colors" />
+                  <input
+                    className="w-full pl-9 pr-3 py-2.5 bg-slate-950 border border-white/5 rounded-lg text-xs text-white focus:outline-none focus:ring-1 focus:ring-indigo-500/50 transition-all"
+                    value={data.slides[activeSlide]?.title || ''}
+                    onChange={e => updateSlideTitle(activeSlide, e.target.value)}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Content Input */}
+            <div className="space-y-4">
+               <div className="flex items-center gap-2 text-white">
+                <LayoutTemplate className="w-4 h-4 text-indigo-400" />
+                <h2 className="text-xs font-bold uppercase tracking-tight">Content Points</h2>
+              </div>
+
+              <div className="space-y-3">
                 {data.slides[activeSlide]?.points.map((pt, i) => (
-                  <div key={i} className="flex gap-2 items-start">
+                  <div key={i} className="group relative">
                     <textarea
-                      className="flex-1 p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 min-h-[56px] resize-none transition"
+                      className="w-full p-3 bg-slate-950 border border-white/5 rounded-lg text-xs text-slate-400 focus:text-white focus:outline-none focus:ring-1 focus:ring-indigo-500/50 min-h-[60px] resize-none transition-all scrollbar-hide"
                       value={pt}
                       onChange={e => updateSlidePoint(activeSlide, i, e.target.value)}
-                      placeholder={`Point ${i + 1}…`}
                     />
                     <button
                       onClick={() => removePoint(activeSlide, i)}
-                      className="mt-1 text-slate-300 hover:text-red-400 transition text-lg leading-none"
-                      title="Remove"
+                      className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-slate-800 border border-white/10 rounded-full flex items-center justify-center text-xs text-slate-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all shadow-xl"
                     >×</button>
                   </div>
                 ))}
                 <button
                   onClick={() => addPoint(activeSlide)}
-                  className="w-full py-2 border border-dashed border-slate-300 hover:border-indigo-400 text-slate-400 hover:text-indigo-600 rounded-lg text-sm transition"
+                  className="w-full py-2.5 border border-dashed border-white/10 rounded-lg text-[10px] font-bold uppercase text-slate-500 hover:text-indigo-400 hover:border-indigo-500/50 hover:bg-indigo-500/5 transition-all"
                 >
-                  + Add point
+                  + Add Point
                 </button>
               </div>
             </div>
-
-            <p className="text-xs text-slate-400 text-center pt-4 border-t border-slate-100">
-              Changes auto-save after 1.5 s of inactivity.
-            </p>
           </div>
 
-        </div>
-      </div>
-    </>
+          <div className="p-4 bg-slate-950/50 border-t border-white/5">
+             <div className="flex items-center gap-2 text-slate-600">
+               <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+               <span className="text-[10px] font-medium italic">Auto-sync enabled</span>
+             </div>
+          </div>
+        </aside>
+
+      </main>
+    </div>
   )
 }

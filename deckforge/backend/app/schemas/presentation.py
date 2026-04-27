@@ -14,6 +14,7 @@ class PresentationCreate(PresentationBase):
 class SlideOut(BaseModel):
     title: str
     points: List[str]
+    image_url: Optional[str] = None
 
 class PresentationUpdate(BaseModel):
     title: Optional[str] = None

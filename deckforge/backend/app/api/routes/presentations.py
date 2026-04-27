@@ -7,7 +7,8 @@ from app.db.session import get_db
 from app.schemas.presentation import PresentationCreate, PresentationOut, PresentationUpdate
 from app.schemas.user import UserOut
 from app.api.deps import get_current_user
-from app.services.ai_service import generate_presentations_structure
+import asyncio
+from app.services.ai_service import generate_presentations_structure, generate_slide_image
 
 router = APIRouter()
 
@@ -28,6 +29,13 @@ async def generate_presentation(
     )
     if not slides:
         raise HTTPException(status_code=500, detail="Failed to generate presentation content")
+    
+    # Generate images for each slide in parallel
+    image_tasks = [generate_slide_image(slide["title"], slide["points"]) for slide in slides]
+    image_urls = await asyncio.gather(*image_tasks)
+    
+    for i, slide in enumerate(slides):
+        slide["image_url"] = image_urls[i]
         
     doc = {
         "user_id": current_user.id,

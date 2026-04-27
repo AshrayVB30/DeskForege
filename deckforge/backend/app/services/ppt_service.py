@@ -1,10 +1,12 @@
 from pptx import Presentation
 import io
+import httpx
+from pptx.util import Inches
 
 def create_ppt_from_json(slides_data: list) -> io.BytesIO:
     """
     Takes JSON structure and creates a PPTX binary stream.
-    Expected format: [{"title": "str", "points": ["str"]}]
+    Expected format: [{"title": "str", "points": ["str"], "image_url": "str"}]
     """
     prs = Presentation()
     
@@ -12,7 +14,7 @@ def create_ppt_from_json(slides_data: list) -> io.BytesIO:
     title_slide_layout = prs.slide_layouts[0]
     bullet_slide_layout = prs.slide_layouts[1]
     
-    # Optional: Title slide generated from first item if it feels like a main title
+    # Optional: Title slide generated from first item
     if len(slides_data) > 0:
         slide = prs.slides.add_slide(title_slide_layout)
         title = slide.shapes.title
@@ -32,6 +34,23 @@ def create_ppt_from_json(slides_data: list) -> io.BytesIO:
         
         title_shape.text = slide_data.get("title", "Untitled Slide")
         
+        # Adjust body shape for image if present
+        image_url = slide_data.get("image_url")
+        if image_url:
+            # Resize text box to half width
+            body_shape.width = Inches(4.5)
+            
+            try:
+                # Download image
+                with httpx.Client() as client:
+                    img_resp = client.get(image_url)
+                    if img_resp.status_code == 200:
+                        img_data = io.BytesIO(img_resp.content)
+                        # Add image to the right side
+                        slide.shapes.add_picture(img_data, Inches(5), Inches(1.5), width=Inches(4))
+            except Exception as e:
+                print(f"Error adding image to PPT: {e}")
+
         tf = body_shape.text_frame
         points = slide_data.get("points", [])
         
